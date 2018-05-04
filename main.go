@@ -2,90 +2,127 @@ package main
 
 import (
 	"fmt"
+	"os"
 
-	bip32 "github.com/FactomProject/go-bip32"
-	bip44 "github.com/FactomProject/go-bip44"
-	//bip32 "github.com/tyler-smith/go-bip32"
-	//bip39 "github.com/tyler-smith/go-bip39"
+	"github.com/AndreasBriese/bbloom"
+	bip39 "github.com/tyler-smith/go-bip39"
+
+	"github.com/rigelrozanski/common"
+	"github.com/rigelrozanski/go-dicedemon/maker"
+	"github.com/rigelrozanski/gowallet/wallet"
 )
 
 func main() {
-	mnemonic := "yellow yellow yellow yellow yellow yellow yellow yellow yellow yellow yellow yellow"
-	key, err := bip44.NewKeyFromMnemonic(mnemonic, bip44.TypeBitcoin, bip32.FirstHardenedChild, 0, 0)
+
+	// simple word search
+	// 3, 6, 9, 12, 15, 18, 21, 24 = 8 options
+	// 2048 words ~ 16000 keys * 100 = 160,000 simple addresses
+	// mnemonic := "yellow yellow yellow yellow yellow yellow yellow yellow yellow yellow yellow yellow"
+
+	args := os.Args[1:]
+	compareCSVFile := args[0]
+	compare, err := common.ReadLines(compareCSVFile)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("BIP44 Master key: ", key.String())
+	fmt.Println("loaded file")
+
+	//bloom
+	lenBloom := float64(len(compare))
+	const probCollide = 0.0001
+	bf := bbloom.New(lenBloom, probCollide)
+	for _, compareEl := range compare {
+		bf.Add([]byte(compareEl))
+	}
+	fmt.Println("added to bloom")
+
+	for mm := 0; mm < 8; mm++ {
+		var mnemonicLen int8
+		switch mm {
+		case 0:
+			mnemonicLen = int8(24)
+		case 1:
+			mnemonicLen = int8(21)
+		case 2:
+			mnemonicLen = int8(18)
+		case 3:
+			mnemonicLen = int8(15)
+		case 4:
+			mnemonicLen = int8(12)
+		case 5:
+			mnemonicLen = int8(9)
+		case 6:
+			mnemonicLen = int8(6)
+		case 7:
+			mnemonicLen = int8(3)
+		}
+		fmt.Printf("mnemonicLen: %v\n", mnemonicLen)
+		for mnemonicsI := 0; mnemonicsI < 2048; mnemonicsI++ {
+			mnemonics := MnemonicsForWord(mnemonicsI, mnemonicLen)
+			for checksumI, mnemonic := range mnemonics {
+				addrs := AddressesFromMnemonic(mnemonic, 5)
+				for _, addr := range addrs {
+					masterAddr := newAddrLoco(addr, mnemonicLen, int16(mnemonicsI), int16(checksumI))
+					if bf.Has([]byte(masterAddr.addr)) {
+						fmt.Printf("false positive: %#v\n", masterAddr)
+						// now try'n find a real positive
+						for _, compareEl := range compare {
+							if masterAddr.addr == compareEl {
+								fmt.Printf("POSITIVE: %#v\n", masterAddr)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	fmt.Println("DONE")
 }
 
-//func main() {
+type addrLoco struct {
+	addr        string
+	mnemonicLen int8
+	mnemonicsI  int16
+	checksumI   int16
+}
 
-//// get the words
-//reader := bufio.NewReader(os.Stdin)
-//fmt.Print("Enter 23 words seperated by spaces:\n")
-//text, err := reader.ReadString('\n')
-//if err != nil {
-//panic(err)
-//}
-//text = strings.TrimRight(text, "\n") // trim the enter
-//words := strings.Split(text, " ")
+func newAddrLoco(addr string, mnemonicLen int8, mnemonicsI, checksumI int16) addrLoco {
+	return addrLoco{
+		addr:        addr,
+		mnemonicLen: mnemonicLen,
+		mnemonicsI:  mnemonicsI,
+		checksumI:   checksumI,
+	}
+}
 
-//if len(words) != 23 {
-//panic("I only take 23 words")
-//}
+// get bip44 addresses from a mnemonic
+func AddressesFromMnemonic(mnemonic string, num uint32) []string {
 
-//var bitsStr string
-//for _, word := range words {
-//i := bip39.ReverseWordMap[word]
-//if i == 0 && word != "abandon" {
-//panic(fmt.Sprintf("bad word: %v\n", word))
-//}
-//wordBits := strconv.FormatInt(int64(i), 2)
-//wordBits = fmt.Sprintf("%011v", wordBits)
-//bitsStr += wordBits
-//}
+	addresses := make([]string, num)
+	seed := bip39.NewSeed(mnemonic, "")
+	walletAcc, err := wallet.NewWalletAccountFromSeed(seed)
+	if err != nil {
+		panic(err)
+	}
+	wallets, err := walletAcc.GenerateWallets(0, num)
+	if err != nil {
+		panic(err)
+	}
+	for i, wallet := range wallets {
+		addresses[i] = wallet.Address
+	}
+	return addresses
+}
 
-//// add three bits of "entropy" lawl
-////    32 * 8 - len(bitsStr) = 3
-//checksumEntropys := []string{"000", "001", "010", "100", "110", "011", "101", "111"}
-//for _, checksumEntropy := range checksumEntropys {
-//fullBitsStr := bitsStr + checksumEntropy
+// get all the mnemonics for single word address
+func MnemonicsForWord(index int, len int8) []string {
 
-//// add a space to the bits every 8 characters
-//// to process the string bits to actual bytes
-//var spaced string
-//for i, s := range fullBitsStr {
-//spaced += string(s)
-//if (i+1)%8 == 0 {
-//spaced += " "
-//}
-//}
+	word := bip39.EnglishWordList[index]
 
-//// process the string bits to bytes
-//entropy := make([]byte, 32)
-//for i, s := range strings.Fields(spaced) {
-//n, _ := strconv.ParseUint(s, 2, 8)
-//b := byte(n)
-//entropy[i] = b
-//}
+	words := make([]string, len-1)
+	for i := int8(0); i < len-1; i++ {
+		words[i] = word
+	}
 
-//// Generate a mnemonic for memorization or user-friendly seeds
-//mnemonic, _ := bip39.NewMnemonic(entropy)
-
-//seed := bip39.NewSeed(mnemonic, "")
-
-//masterKey, _ := bip32.NewMasterKey(seed)
-//publicKey := masterKey.PublicKey()
-
-//// Display mnemonic and keys
-//fmt.Println(mnemonic)
-//fmt.Println("Master private key: ", masterKey)
-//fmt.Println("Master public key: ", publicKey)
-
-//key, err := bip44.NewKeyFromMnemonic(mnemonic, 0, 0, 0, 0)
-//if err != nil {
-//panic(err)
-//}
-//fmt.Println("BIP44 Master key: ", key.String())
-//}
-//}
+	return maker.PartialMnemonicToAllMnemonic(words)
+}

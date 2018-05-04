@@ -3,39 +3,55 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/FactomProject/basen"
+  name = "github.com/AndreasBriese/bbloom"
   packages = ["."]
-  revision = "fe3947df716ebfda9847eb1b9a48f9592e06478c"
+  revision = "28f7e881ca57bc00e028f9ede9f0d9104cfeef5e"
 
 [[projects]]
   branch = "master"
-  name = "github.com/FactomProject/btcutilecc"
-  packages = ["."]
-  revision = "d3a63a5752ecf3fbc06bd97365da752111c263df"
-
-[[projects]]
-  name = "github.com/FactomProject/go-bip32"
-  packages = ["."]
-  revision = "58394f75c1d04ee30972d810015f491b9c7bee02"
-  version = "v0.3.5"
-
-[[projects]]
-  name = "github.com/FactomProject/go-bip39"
-  packages = ["."]
-  revision = "769c615cc2aa7a2283bfe4ded1f3d5fd7553491d"
-  version = "v0.3.5"
+  name = "github.com/btcsuite/btcd"
+  packages = [
+    "btcec",
+    "chaincfg",
+    "chaincfg/chainhash",
+    "wire"
+  ]
+  revision = "675abc5df3c5531bc741b56a765e35623459da6d"
 
 [[projects]]
   branch = "master"
-  name = "github.com/FactomProject/go-bip44"
-  packages = ["."]
-  revision = "fd672f46ddc35bb381f497f7b64c9cf34f9e0703"
+  name = "github.com/btcsuite/btcutil"
+  packages = [
+    ".",
+    "base58",
+    "bech32",
+    "hdkeychain"
+  ]
+  revision = "501929d3d046174c3d39f0ea54ece471aa17238c"
 
 [[projects]]
   branch = "master"
-  name = "github.com/tyler-smith/go-bip32"
+  name = "github.com/rigelrozanski/common"
   packages = ["."]
-  revision = "2c9cfd17756470a0b7c3e4b7954bae7d11035504"
+  revision = "d63056318d40da5fd35a2a227b80fbea477db2f4"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/rigelrozanski/go-bip39"
+  packages = ["."]
+  revision = "13853adb3b82f32d5ae13cdb8477d7393d367598"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/rigelrozanski/go-dicedemon"
+  packages = ["maker"]
+  revision = "9f1f384f6e3bda3a31c6a9547a415d85eb721ad0"
+
+[[projects]]
+  name = "github.com/rigelrozanski/gowallet"
+  packages = ["wallet"]
+  revision = "2ff824fc76ad7b0277d80fbaabd8e201e7cf787e"
+  version = "0.22"
 
 [[projects]]
   branch = "master"
@@ -48,13 +64,14 @@
   name = "golang.org/x/crypto"
   packages = [
     "pbkdf2",
-    "ripemd160"
+    "ripemd160",
+    "scrypt"
   ]
-  revision = "8b1d31080a7692e075c4681cb2458454a1fe0706"
+  revision = "1f94bef427e370e425e55b172f3b5e300ef38304"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e6a168e01631cf7e6a0fc3608b43bd994cc60e3c86bc7555aeef247d5680f7c6"
+  inputs-digest = "42452f758ebe7238378d6a114655c0bda75d1a062cb06611e320010725807a13"
   solver-name = "gps-cdcl"
   solver-version = 1
